@@ -30,6 +30,7 @@ theme_economist_white(base_size = 11, base_family = "sans",
 ```
 
 ``` {r}
+setwd("~/Desktop/BGA/reto_visualizacion_datos")
 convivencia <- read_excel("DATA/Seguridad-Convivencia.xlsx", 
                                     sheet = "Indicadores de convivencia")
 seguridad <- read_excel("DATA/Seguridad-Convivencia.xlsx", 
