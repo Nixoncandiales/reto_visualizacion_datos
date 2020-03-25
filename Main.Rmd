@@ -1,0 +1,370 @@
+---
+title: "Proyecto Vizaluación BGA"
+author: "Nixon Alberto Torres Candiales"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    social: menu
+    source_code: embed
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(plotly)
+library(plyr)
+library(flexdashboard)
+library(readxl)
+library(knitr)
+library(DT)
+library(rpivotTable)
+library(dplyr)
+library(openintro)
+library(highcharter)
+library(ggvis)
+library(tidyverse)
+library(ggthemes)
+library(gridExtra)
+library(tseries)
+theme_economist_white(base_size = 11, base_family = "sans",
+                      gray_bg = TRUE, horizontal = TRUE)
+```
+
+``` {r}
+convivencia <- read_excel("DATA/Seguridad-Convivencia.xlsx", 
+                                    sheet = "Indicadores de convivencia")
+seguridad <- read_excel("DATA/Seguridad-Convivencia.xlsx", 
+                          sheet = "Indicadores de seguridad")
+transito <- read_excel("DATA/Transito.xlsx", 
+                       sheet = "Transito")
+abast <- read_excel("DATA/Abastecimiento.xlsx", 
+                    sheet = "Volumenes de destino")
+    j <- abast %>% select(-t) %>% names()
+    abast <- gather(abast, j , key="Departamento", value="Volumenes")
+    rm(j)
+    abast <- abast %>% arrange(Departamento)
+```
+
+Seguridad y Convivencia {data-icon="fa-globe"}
+=======================================================================
+Row {data-width=150}
+-------------------------------------
+
+### Indices de Seguridad:
+
+```{r}
+valueBox(paste("Total"),
+         color = "green")
+```
+
+### Hurtos a Personas
+
+```{r}
+valueBox(sum(seguridad$hurt_personas),
+         icon = "fa-user-plus", caption = "Hurtos Personas",color = "blue")
+```
+
+### Hurtos a Comercios
+
+```{r}
+valueBox(sum(seguridad$hurt_comercio),
+         icon = "fa-building", caption = "Hurtos Comercios",color = "blue")
+```
+
+### Lesiones Personales
+
+```{r}
+valueBox(sum(seguridad$lesiones),
+          icon = "fa-user-plus", caption = "Lesiones Personales",color = "blue")
+```
+
+### Homicidios
+
+```{r}
+valueBox(sum(seguridad$homicidios),
+          icon = "fa-user-times", caption = "Homicidios",color = "red")
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Tendencia principales indicadores de seguridad
+
+```{r}
+## Line plots
+graph1 <- ggplot(data = seguridad) +  
+geom_point(mapping = aes(x = t, y = hurt_personas, colour = "Hurto Personas"), shape=1) +
+  geom_smooth(mapping = aes(x = t, y = hurt_personas, colour = "Hurto Personas"), se=FALSE) +
+geom_point(mapping = aes(x = t, y = hurt_comercio, colour = "Hurto Comercios"), shape=1) +
+  geom_smooth(mapping = aes(x = t, y = hurt_comercio, colour = "Hurto Comercios"), se=FALSE) +
+geom_point(mapping = aes(x = t, y = lesiones, colour = "Lesiones Personales"), shape=1) +
+  geom_smooth(mapping = aes(x = t, y = lesiones, colour = "Lesiones Personales"), se=FALSE) +
+geom_point(mapping = aes(x = t, y = homicidios, colour = "Homicidios"), shape=1) +
+  geom_smooth(mapping = aes(x = t, y = homicidios, colour = "Homicidios"), se=FALSE)
+  
+graph1 <- graph1 +
+  theme_economist_white(gray_bg = FALSE) +
+  scale_colour_economist() + 
+  ylab('Número de Casos')+xlab('Fecha')
+
+ggplotly(graph1)
+## Cumulative plots
+```
+
+
+### Tipos de crimenes
+
+```{r}
+crimen <- rbind("Hurto Personas", "Hurto Comercio", "Lesiones Personales", "Homicidios")
+total <- rbind(sum(seguridad$hurt_personas), sum(seguridad$hurt_comercio), sum(seguridad$lesiones), sum(seguridad$homicidios))
+total <- mapply(total, FUN=as.numeric)
+data1 <- data.frame(crimen, total)
+data1 <- data1 %>% mutate(pp=total/sum(total)*100)
+
+graph2 <- data1 %>% plot_ly(type='pie', labels=crimen, values=total, 
+               textinfo='percent')#, insidetextorientation='radial')
+graph2
+```
+
+
+Row {data-width=150}
+-------------------------------------
+
+### Indices de Convivencia:
+
+```{r}
+valueBox(paste("Total"),
+         color = "green")
+```
+
+### Desacatos a decretos de COVID-19
+
+```{r}
+valueBox(sum(convivencia$desacatos),
+         icon = "fa-user-plus", color="blue")
+```
+
+### Establecimientos
+
+```{r}
+valueBox(sum(convivencia$establecimientos),
+         icon = "fa-building", color="blue")
+```
+
+### Menores de Edad
+
+```{r}
+valueBox(sum(convivencia$menores),
+          icon = "fa-user-plus", color="blue")
+```
+
+### Violencia Intrafamiliar
+
+```{r}
+valueBox(sum(convivencia$violencia_intra),
+          icon = "fa-user-plus", color="blue")
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Porcentaje de desacatos a decretos COVID-19
+
+```{r}
+    j <- convivencia %>% select(-t) %>% names()
+    convivencia <- gather(convivencia, j , key="infraccion", value="Casos")
+ grapgh3 <- convivencia %>% select(-t) %>% group_by(infraccion) %>% summarise_all(sum) %>%
+        plot_ly(type='pie', labels=~infraccion, values=~Casos, textinfo='percent')
+ grapgh3
+```
+
+
+### Tendencia principales indicadores de convivencia
+
+```{r}
+convivencia <- read_excel("DATA/Seguridad-Convivencia.xlsx", 
+                                    sheet = "Indicadores de convivencia")
+graph4 <- ggplot(data = convivencia) +  
+geom_point(mapping = aes(x = t, y = desacatos, colour = "Desacatos"), shape=1) +
+  geom_smooth(mapping = aes(x = t, y = desacatos, colour = "Desacatos"), se=FALSE) +
+geom_point(mapping = aes(x = t, y = establecimientos, colour = "Establecimientos"), shape=1) +
+  geom_smooth(mapping = aes(x = t, y = establecimientos, colour ="Establecimientos"), se=FALSE) +
+geom_point(mapping = aes(x = t, y = menores, colour = "Menores de Edad"), shape=1) +
+  geom_smooth(mapping = aes(x = t, y = menores, colour = "Menores de Edad"), se=FALSE) +
+geom_point(mapping = aes(x = t, y = violencia_intra, colour = "Violencia Intrafamiliar"), shape=1) +
+  geom_smooth(mapping = aes(x = t, y = violencia_intra, colour ="Violencia Intrafamiliar"), se=FALSE)
+
+graph4 <- graph4 +
+  theme_economist_white(gray_bg = FALSE) +
+  scale_colour_economist() + 
+  ylab('Número de Casos')+xlab('Fecha')
+
+ggplotly(graph4)
+```
+
+
+
+
+Transito {data-icon="fa-globe"}
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+### Clasificación de reportes en Transito
+
+```{r}
+graph6 <- transito %>% select(-Tiempo) %>% group_by(Categoria, Indicador) %>% summarise_all(sum) %>% 
+  mutate(is_comparendo=ifelse((Categoria=="comparendos"),1,0)) %>% 
+  filter(is_comparendo != 1) %>%
+ggplot() +
+  geom_bar(
+    aes(x = factor(1), y = Numero, fill=Indicador),
+    stat = "identity") +
+  facet_grid(.~Categoria) + 
+  coord_polar(theta="y")
+
+graph6 +
+  theme_economist_white(gray_bg = FALSE) +
+  scale_colour_economist() + 
+  ylab('Número de Casos')+xlab('Categoría')
+```
+
+### Totales
+```{r}
+graph7 <- transito %>% select(-Tiempo) %>% group_by(Categoria, Indicador) %>%
+    summarise_all(sum) %>% 
+    mutate(is_comparendo=ifelse((Categoria=="comparendos"),1,0)) %>% 
+  filter(is_comparendo != 1) %>% 
+    ggplot() +
+    geom_bar(aes(x = Categoria, y = Numero, fill=Indicador),
+    stat = "identity", position = "Dodge")
+
+graph7 <- graph7 + theme_economist_white(gray_bg = FALSE) +
+  scale_colour_economist() + 
+  ylab('Número de Casos')+xlab('Categoría')
+
+ggplotly(graph7)
+```
+
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Tendencia Accidentes
+
+```{r}
+#Accdidentes
+a<- transito %>% filter(Categoria == "accidentes") %>%
+ggplot(transito, mapping=aes(x=Tiempo, y=Numero, colour = Indicador)) +
+  geom_point(shape=1) +    # Use hollow circles
+  geom_smooth()         # Add a loess smoothed fit curve with confidence region
+a <- a +
+  theme_economist_white(gray_bg = FALSE) +
+  scale_colour_economist() + 
+  ylab('Número de Casos')+xlab('Fecha')
+ggplotly(a)
+```
+
+### Tendencia Lesiones
+```{r}
+#Lesiones
+b<- transito %>% filter(Categoria == "lesiones") %>%
+  ggplot(transito, mapping=aes(x=Tiempo, y=Numero, colour = Indicador)) +
+  geom_point(shape=1) +    # Use hollow circles
+  geom_smooth()         # Add a loess smoothed fit curve with confidence region
+b <- b +
+  theme_economist_white(gray_bg = FALSE) +
+  scale_colour_economist() + 
+  ylab('Número de Casos')+xlab('Fecha')
+ggplotly(b)
+```
+
+### Tendencia Muertes
+```{r}
+#Muertes
+c<- transito %>% filter(Categoria == "muertes") %>%
+  ggplot(transito, mapping=aes(x=Tiempo, y=Numero, colour = Indicador)) +
+  geom_point(shape=1) +    # Use hollow circles
+  geom_smooth()         # Add a loess smoothed fit curve with confidence region
+c <- c +
+  theme_economist_white(gray_bg = FALSE) +
+  scale_colour_economist() + 
+  ylab('Número de Casos')+xlab('Fecha')
+ggplotly(c)
+```
+
+### Tendencia Comparendos
+```{r}
+#Comparendos
+d<- transito %>% filter(Categoria == "comparendos") %>%
+  ggplot(transito, mapping=aes(x=Tiempo, y=Numero)) +
+  geom_point(shape=1) +    # Use hollow circles
+  geom_smooth(method = lm)  +       # Add a loess smoothed fit curve with confidence region
+  facet_grid(Indicador ~ .)
+d <- d +
+  theme_economist_white(gray_bg = FALSE) +
+  scale_colour_economist() + 
+  ylab('Número de Casos')+xlab('Fecha')
+ggplotly(d)
+```
+
+
+Abastecimiento {data-icon="fa-globe"}
+=======================================================================
+
+Row {data-height=650} {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Mapa: Volumenes de Destino
+
+```{r}
+##Data
+mean_abast <- abast %>% select(-t) %>% group_by(Departamento) %>% 
+  summarise_all(mean) %>% mutate(State = toupper(substring(Departamento, 1, 2)))
+
+###Mapa
+map_col <- get_data_from_map(download_map_data("https://code.highcharts.com/mapdata/countries/co/co-all.js"))
+state= map_col%>%
+  select(`hc-a2`)%>%
+  arrange(`hc-a2`)
+mean_abast <- state %>%
+  left_join(mean_abast, by = c("hc-a2" = "State")) %>% 
+  select("hc-a2", "Volumenes")
+mean_abast <- as.data.frame(mean_abast)
+mean_abast$"Volumenes" <- replace_na(mean_abast$"Volumenes",0)
+names(mean_abast)= c("Departamento", "volumenes")
+rm(state, map_col)
+
+hcmap("https://code.highcharts.com/mapdata/countries/co/co-all.js", data = mean_abast, value = "volumenes",
+      joinBy = c("hc-a2", "Departamento"), name = "Volumenes de destino",
+      dataLabels = list(enabled = TRUE, format = '{point.name}'),
+      borderColor = "#FAFAFA", borderWidth = 0.1,
+      tooltip = list(valueDecimals = 1)) %>%
+  hc_title(text = "Promedio de Volumenes de Destino") %>%
+  hc_subtitle(text = "Fuente: Alcadia Bucaramanga") %>%
+  hc_mapNavigation(enabled = T)
+```
+Row {data-height=350} {.tabset .tabset-fade}
+-------------------------------------
+   
+### Variación: Volumenes de Destino
+
+```{r}
+abast <- abast %>% group_by(Departamento) %>% mutate(volumen_z = (Volumenes - mean(Volumenes))/sd(Volumenes), volumen_tipo = ifelse(volumen_z < 0, "Menor", "Mayor"), volumen_tipo2 = ifelse(volumen_z < 0, 0, 1), Dep = toupper(substring(Departamento, 1, 2)))
+   
+graph9 <-     abast %>%
+       ggplot()+
+       geom_bar(aes(x=t, y=volumen_z, fill=volumen_tipo),  stat='identity') +
+     scale_fill_manual(name="Volumen de Destino:", 
+                       labels = c("Mayor al promedio", "Menor al promedio"), 
+                       values = c("Mayor"="#00ba38", "Menor"="#f8766d"))  +
+       ylab('Desviación Estándar ')+xlab('Fecha') +
+      coord_flip() +
+       facet_grid(.~Dep)
+
+graph9 <- graph9 + theme_economist_white(gray_bg = FALSE) +
+  scale_colour_economist() + theme(legend.position="top")
+    
+graph9 <- graph9 + theme_bw() + theme(legend.position="top")
+ggplotly(graph9)
+```   
+
